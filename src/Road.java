@@ -32,5 +32,6 @@ public class Road {
 	public int getID(){ return this.RoadID; }
 	public String getLabel() { return this.label; }
 	public Set<Segment> getSeg() { return this.segments; }
+	public int getType(){return this.type;}
 	
 }

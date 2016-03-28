@@ -21,9 +21,6 @@ import java.io.IOException;
  * @ID 300 337 630
  */
 public class MapProgramv2 extends GUI {
-	private static final int NUM_SQUARES = 10;
-	private static final int SQUARE_SIZE = 30;
-
 
 	private Map<Integer, Node> nodes = new HashMap<Integer, Node>();
 	private Map<Integer, Road> roads = new HashMap<Integer, Road>();
@@ -47,6 +44,7 @@ public class MapProgramv2 extends GUI {
 
 	public void drawPolygons(Graphics g){
 		for(Polygon p : polygons){
+			g.setColor(Color.DARK_GRAY);
 			List<Location> locations = p.getCo();
 			int[] x = new int[locations.size()];
 			int[] y = new int[locations.size()];
@@ -58,10 +56,78 @@ public class MapProgramv2 extends GUI {
 				y[countOfArraySize] = (int) pointOfLoc.getY();
 				countOfArraySize++;
 			}
+
+			String typeOfPolygon = p.getType();
+			Color col = null;
+			switch(typeOfPolygon){
+			case "Type=0x28": //water
+				col = new Color(174,209,255);
+				g.setColor(col);	
+				break;
+			case "Type=0x16" : // forest
+				col = new Color(202,223,170);
+				g.setColor(col);	
+				break;				
+			case "Type=0x17" : // reserve
+				col = new Color(202,223,170);
+				g.setColor(col);	
+				break;		
+			case "Type=0xe" : // airstrip
+				col = new Color(211,202,189);
+				g.setColor(col);	
+				break;		
+
+			case "Type=0x7" : // terminal
+				col = new Color(223,219,212);
+				g.setColor(col);	
+				break;		
+
+			case "Type=0x18" : // golf course 
+				col = new Color(202,223,170);
+				g.setColor(col);	
+				break;	
+			case "Type=0x14" : // national park
+				col = new Color(232,221,129);
+				g.setColor(col);	
+				break;	
+			case "Type=0x15" : // national park
+				col = new Color(232,221,129);
+				g.setColor(col);	
+				break;	
+			case "Type=0x3c" : // lake 
+				col = new Color(174,209,255);
+				g.setColor(col);	
+				break;	
+			case "Type=0x3d" : // lake 
+				col = new Color(174,209,255);
+				g.setColor(col);	
+				break;	
+			case "Type=0x3e" : // lake 
+				col = new Color(174,209,255);
+				g.setColor(col);	
+				break;	
+			case "Type=0x29" : // lake 
+				col = new Color(174,209,255);
+				g.setColor(col);	
+				break;	
+			case "Type=0x32" : // lake 
+				col = new Color(174,209,255);
+				g.setColor(col);	
+				break;	
+				
+			default :  
+				col = new Color(202,223,170);
+				g.setColor(col);	
+				break;	
+
+			}
+
+
 			g.fillPolygon(x,y,locations.size());
 		}
-
 	}
+
+
 
 	public void drawSeg(Graphics g){
 		Graphics2D g2 = (Graphics2D) g;
@@ -75,6 +141,27 @@ public class MapProgramv2 extends GUI {
 				Location two = segLoc.get(i);
 				Point p1 = one.asPoint(origin, scale);
 				Point p2 = two.asPoint(origin, scale);
+
+				int roadID = s.getId();
+				for(Map.Entry<Integer, Road> road : roads.entrySet()){
+					if(road.getKey() == roadID){
+
+						if(road.getValue().getType() == 22) // walkway
+							g.setColor(new Color(213,212,200));
+
+						else if(road.getValue().getType() == 6) // road
+							g.setColor(new Color(255,255,255));
+						
+						else if(road.getValue().getType() == 6) // road
+							g.setColor(new Color(255,255,255));
+						else
+							g.setColor(new Color(255,255,255));
+
+
+					} // close if
+
+				} // close if
+
 				g2.drawLine((int)p1.getX(), (int)p1.getY(), (int)p2.getX(), (int)p2.getY());
 			}
 		}
@@ -93,16 +180,16 @@ public class MapProgramv2 extends GUI {
 					Point p1 = one.asPoint(origin, scale);
 					Point p2 = two.asPoint(origin, scale);
 					g2.drawLine((int)p1.getX(), (int)p1.getY(), (int)p2.getX(), (int)p2.getY());
-				}
-			}
+				} // close for
+
+			} // close for
 		}
 
-
-	}
+	} // close method
 
 
 	public void drawNodes(Graphics g){
-		g.setColor(Color.black);
+		g.setColor(new Color(255,255,255));
 
 		for (Map.Entry<Integer, Node> entry : nodes.entrySet()) { // draws the nodes
 			Node node = entry.getValue();		
@@ -301,35 +388,92 @@ public class MapProgramv2 extends GUI {
 
 		loadTrie();
 		loadPolygons(polygonsFile);
-
+		System.out.println("DONE");
 	}
 
 
 	public void loadPolygons(File polygonsFile){
+		int lineCount = 0;
 		try {
 			String line = null;
 			BufferedReader data = new BufferedReader(new FileReader(polygonsFile));
 
 			while ((line = data.readLine()) != null) {
-				ArrayList<Location> coordinates = new ArrayList<Location>();
-				data.readLine(); //skips the first line "[POLYGON]"
-				String type = data.readLine();
-				String endLevel = data.readLine();
-				Scanner scanner = new Scanner(new File(endLevel));
-				String label = "Label";
-				if(scanner.next().startsWith(label))
-					data.readLine();
-				scanner.close();						
-				String cityID = data.readLine();
-				String polygonData = data.readLine();
-				Scanner scan = new Scanner(new File(polygonData));
-				while(scan.hasNext()){
-					double lat = scan.nextInt();
-					double lng = scan.nextInt();
-					Location loc = Location.newFromLatLon(lat, lng);
-					coordinates.add(loc);
+				lineCount++;
+				String endLevel = "";
+				String label = "";
+				String cityID = "";
+				String polygonData = "";
+				boolean hasData = false;
+
+
+				if(!line.equals("[POLYGON]")){
+					System.out.println("ERROR STRT");
 				}
-				data.readLine();
+				ArrayList<Location> coordinates = new ArrayList<Location>();
+
+				String type = data.readLine();
+				if(!type.startsWith("Type=")){
+					label = type;
+					type = "";
+				}
+
+				label = data.readLine();
+				if(!label.startsWith("Label=")){
+					endLevel = label;
+					label = "";
+				}
+
+				endLevel = data.readLine();
+				if(!endLevel.startsWith("EndLevel=")){
+					cityID = endLevel;
+					endLevel = "";
+
+				}
+				cityID = data.readLine();
+				if(!cityID.startsWith("CityIdx")){
+					polygonData = cityID;
+					cityID = "";
+				}
+				else{
+					polygonData = data.readLine();
+				}
+
+				if(polygonData.startsWith("Data"))
+					hasData = true;
+
+				if(hasData){
+
+					if(polygonData.length() < 10){
+						System.out.println("ERROR 99");
+						System.out.println(polygonData);
+					}
+
+					polygonData = polygonData.substring(6, polygonData.length()-1);  // removes the "Data="
+					String[] co = polygonData.split(","); 
+					for(int i = 0; i < co.length; i++){
+						if(co[i].startsWith("(")) 
+							co[i] = co[i].substring(1, co[i].length()-1); // removes the brackets
+						else if(co[i].endsWith(")"))
+							co[i] = co[i].substring(0, co[i].length()-2); // removes the brackets
+					}
+
+					for(int i = 1; i < co.length; i+=2){ // gets the co ordinates as doubles from co
+						double one = Double.parseDouble(co[i-1]);
+						double two = Double.parseDouble(co[i]);
+						Location l = Location.newFromLatLon(one, two);
+						coordinates.add(l);
+					}
+				}
+
+				String end = data.readLine();
+				while(true){ // skips [end]
+					if(end.compareTo("[END]") == 0)
+						break;
+					end = data.readLine();
+				}	
+
+				data.readLine(); // skips whitespace
 				polygons.add(new Polygon(type, endLevel, cityID, coordinates)); // creates and adds the new polygon						
 			}
 		} catch (FileNotFoundException e) {
