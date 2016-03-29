@@ -1,6 +1,7 @@
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
@@ -75,6 +76,8 @@ public abstract class GUI {
 
 	protected abstract void onScroll(MouseWheelEvent e);
 
+
+	protected abstract void directions();
 
 	protected abstract String[] onSearch();
 
@@ -244,6 +247,21 @@ public abstract class GUI {
 			}
 		});
 
+		JButton directions = new JButton("Directions");
+		directions.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent ev) {
+				directions();	
+				Font f = directions.getFont();
+				int fontStyle = f.getStyle();
+				if( (fontStyle & Font.BOLD) == Font.BOLD)
+					directions.setFont(f.deriveFont(Font.PLAIN));
+				else
+					directions.setFont(f.deriveFont(Font.BOLD));
+				redraw();
+			}
+		});
+
+
 		JButton west = new JButton("\u2190");
 		west.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent ev) {
@@ -348,11 +366,12 @@ public abstract class GUI {
 		controls.setBorder(edge);
 
 		JPanel loadquit = new JPanel();
-		loadquit.setLayout(new GridLayout(2, 1));
+		loadquit.setLayout(new GridLayout(3, 1));
 		// manually set a fixed size for the panel containing the load and quit
 		// buttons (doesn't change with window resize).
-		loadquit.setMaximumSize(new Dimension(50, 100));
+		loadquit.setMaximumSize(new Dimension(50, 200));
 		loadquit.add(load);
+		loadquit.add(directions);
 		loadquit.add(quit);
 		controls.add(loadquit);
 		// rigid areas are invisible components that can be used to space
@@ -360,7 +379,7 @@ public abstract class GUI {
 		controls.add(Box.createRigidArea(new Dimension(15, 0)));
 
 		JPanel navigation = new JPanel();
-		navigation.setMaximumSize(new Dimension(150, 60));
+		navigation.setMaximumSize(new Dimension(100, 200));
 		navigation.setLayout(new GridLayout(2, 3));
 		navigation.add(out);
 		navigation.add(north);
@@ -385,7 +404,7 @@ public abstract class GUI {
 
 		JPanel searchPanel = new JPanel();
 		searchPanel.setLayout(new GridLayout(2, 1));
-		searchPanel.setMaximumSize(new Dimension(100, 100));
+		searchPanel.setMaximumSize(new Dimension(100, 50));
 
 		searchResults.addItemListener(
 				new ItemListener(){

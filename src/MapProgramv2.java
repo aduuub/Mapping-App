@@ -30,6 +30,9 @@ public class MapProgramv2 extends GUI {
 
 	private double scale = 20; // default zoom
 	private Trie trie; 
+	private boolean awaitingClick = false; // used for map directions
+	private Location transitOne;
+	private Location transitTwo;
 	private Location origin = Location.newFromLatLon(-36.847622 , 174.763444); // centre of Auckland location
 
 	public MapProgramv2() {
@@ -154,6 +157,13 @@ public class MapProgramv2 extends GUI {
 						
 						else if(road.getValue().getType() == 6) // road
 							g.setColor(new Color(255,255,255));
+						
+						else if(road.getValue().getType() == 1) // motorway
+							g.setColor(new Color(255,255,104));
+						
+						else if(road.getValue().getType() == 9) // motorway
+							g.setColor(new Color(255,255,104));			
+						
 						else
 							g.setColor(new Color(255,255,255));
 
@@ -213,6 +223,7 @@ public class MapProgramv2 extends GUI {
 	protected void onClick(MouseEvent e) {
 		int x = e.getX();
 		int y = e.getY();
+		
 		double closestDistance = 99999999;
 		Node closestNode = null;
 		Point p = new Point(x,y);
@@ -232,6 +243,19 @@ public class MapProgramv2 extends GUI {
 			getTextOutputArea().setText("No intersections found"); 
 			return;
 		}
+		
+		
+		if(awaitingClick){ // the user is wanting directions to be shown, not the connecting intersections
+			if(transitOne != null && transitTwo != null){
+				transitOne = closestNode.getLoc();
+				transitTwo = null;
+			}
+			else if(transitOne != null && transitTwo == null){
+				transitTwo = closestNode.getLoc();
+				awaitingClick = false;
+			}
+			
+		}		
 
 		Set<Segment> segments = closestNode.getSeg(); // gets segments related to that node
 		Set<Integer> roadIDs = new HashSet<Integer>(); // for the road id's related to that segment
@@ -252,10 +276,19 @@ public class MapProgramv2 extends GUI {
 		getTextOutputArea().setText(printText);
 
 	}
+	
+	/** Calculates the shortest path of roads from one intersection to another
+	 */
+	public void calculateShortestPath() {
+		
+		
+		
+		
+	}
+	
 	/** Called on key press to load the potential roads
 	 * @return String[] of road names matching input text
 	 */
-
 	@Override
 	protected String[] onSearch() {
 		selectedSeg.clear();
@@ -274,7 +307,9 @@ public class MapProgramv2 extends GUI {
 		return results;
 	}
 
-
+/** Called when the user wants to shift the GUI
+ * 
+ */
 	@Override
 	protected void onMove(Move m) {
 		double shift = 20 / scale; // adjusts how far it moves when clicked, depends on scale how much it will move
@@ -290,8 +325,23 @@ public class MapProgramv2 extends GUI {
 		if(scale == 0){scale = 5;} // so there is no divide by zero errors
 
 	}
+	
+	/**
+	 * Used to toggle when the user wants transit instructions or not
+	 */
+	@Override
+	protected void directions(){
+		transitOne = null;
+		transitTwo = null;
+		this.awaitingClick = !this.awaitingClick;
+	}
+	
+	/** Loads the files 
+	 * 
+	 */
 	@Override
 	protected void onLoad(File nodesFile, File roadsFile, File segmentsFile, File polygonsFile)  {
+		getTextOutputArea().setText("Loading intersections \n"); 
 
 		// Loading the nodes
 		BufferedReader data;
@@ -313,6 +363,8 @@ public class MapProgramv2 extends GUI {
 		} catch(Exception e){
 			e.printStackTrace();
 		}
+		getTextOutputArea().append("Loaded intersections sucesssfully \n"); 
+		getTextOutputArea().append("Loading roads \n"); 
 
 
 		// Loading the roads
@@ -343,7 +395,10 @@ public class MapProgramv2 extends GUI {
 			e.printStackTrace();
 		}
 
-
+		getTextOutputArea().append("Loaded roads sucesssfully \n"); 
+		getTextOutputArea().append("Loading road segments \n"); 
+		int segCount = 0;
+		
 		// Loading the segments
 		try {
 			String line = null;
@@ -351,6 +406,7 @@ public class MapProgramv2 extends GUI {
 			line = data.readLine(); //skips the first line with file names
 
 			while ((line = data.readLine()) != null) {
+				System.out.println(segCount++);
 
 				String[] values = line.split("\t");
 				int roadID = Integer.parseInt(values[0]);
@@ -385,10 +441,13 @@ public class MapProgramv2 extends GUI {
 		} catch(Exception e){
 			e.printStackTrace();
 		}
-
+		getTextOutputArea().append("Loaded segments sucesssfully\n"); 
+		getTextOutputArea().append("Preparing search\n"); 
 		loadTrie();
+		getTextOutputArea().append("Search loaded sucessfully \n"); 
+		getTextOutputArea().append("Preparing objects \n"); 
 		loadPolygons(polygonsFile);
-		System.out.println("DONE");
+		getTextOutputArea().append("Loaded objects sucesssfully \n"); 
 	}
 
 
