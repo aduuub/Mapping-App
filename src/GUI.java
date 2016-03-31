@@ -257,7 +257,6 @@ public abstract class GUI {
 					directions.setFont(f.deriveFont(Font.PLAIN));
 				else
 					directions.setFont(f.deriveFont(Font.BOLD));
-				redraw();
 			}
 		});
 

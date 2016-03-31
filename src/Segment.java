@@ -6,9 +6,10 @@ public class Segment {
 	int node1;
 	int node2;
 	public ArrayList<Location> locations = new ArrayList<Location>();
+	public Road road;
 
 
-	public Segment(int id, double length, int node1, int node2, ArrayList<Double> co){
+	public Segment(int id, double length, int node1, int node2, ArrayList<Double> co, Road rd){
 		this.roadID = id;
 		this.length = length;
 		this.node1 = node1;
@@ -19,6 +20,7 @@ public class Segment {
 			Location tempLocation = Location.newFromLatLon(lat, lng);
 			locations.add(tempLocation);
 		}
+		road = rd;
 		System.out.println("");
 	}
 
