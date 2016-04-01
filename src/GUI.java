@@ -251,6 +251,8 @@ public abstract class GUI {
 		directions.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent ev) {
 				directions();	
+				directions.requestFocus();
+				//directions.setFocusable(false);
 				Font f = directions.getFont();
 				int fontStyle = f.getStyle();
 				if( (fontStyle & Font.BOLD) == Font.BOLD)

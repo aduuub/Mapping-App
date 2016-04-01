@@ -32,6 +32,8 @@ public class Segment {
 	public int getNode1(){ return this.node1; }
 	public int getNode2(){ return this.node2; }
 	public ArrayList<Location> getLocations(){ return this.locations; }
-	
+	public int getOtherNodeId(int id){
+		return this.node1 == id ? node2 : node1;
+	}
 
 }

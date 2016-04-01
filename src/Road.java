@@ -34,4 +34,5 @@ public class Road {
 	public Set<Segment> getSeg() { return this.segments; }
 	public int getType(){return this.type;}
 	
+	
 }

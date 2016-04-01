@@ -5,6 +5,11 @@ public class Node {
 	private int id;
 	private double x;
 	private double y;
+	
+	public boolean visited;
+	public Node pathFrom;
+	public double cost;
+	
 	private Location location;
 	private Set<Segment> segments = new HashSet<Segment>();
 	
@@ -12,11 +17,11 @@ public class Node {
 		this.id = id;
 		this.x = x;
 		this.y = y;
+		this.pathFrom = null;
+		this.visited = false;
+		this.cost = 0;
 		location = new Location(x, y);
-		location = location.newFromLatLon(x, y);
-		
-		
-		
+		location = location.newFromLatLon(x, y);	
 		
 	}
 	
