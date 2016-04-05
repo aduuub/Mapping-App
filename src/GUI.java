@@ -1,5 +1,4 @@
 import java.awt.BorderLayout;
-import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
@@ -30,6 +29,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.JToggleButton;
 import javax.swing.border.Border;
 import javax.swing.text.DefaultCaret;
 
@@ -80,6 +80,8 @@ public abstract class GUI {
 	protected abstract void directions();
 
 	protected abstract String[] onSearch();
+
+	protected abstract void findArticulationPoints();
 
 	/**
 	 * Is called whenever a navigation button is pressed. An instance of the
@@ -176,7 +178,7 @@ public abstract class GUI {
 	private JTextArea textOutputArea;
 
 	private JTextField search;
-	private JComboBox searchResults;
+	private JComboBox<String> searchResults;
 	private JFileChooser fileChooser;
 
 	public GUI() {
@@ -247,18 +249,21 @@ public abstract class GUI {
 			}
 		});
 
-		JButton directions = new JButton("Directions");
-		directions.addActionListener(new ActionListener() {
+		JToggleButton directions = new JToggleButton("Directions", false);
+		directions.addItemListener(new ItemListener() {
+			public void itemStateChanged(ItemEvent ev) {
+				directions();
+				redraw();
+			}
+		});	
+
+
+		JToggleButton artPoints = new JToggleButton("Find Art. Points", false);
+		artPoints.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent ev) {
-				directions();	
-				directions.requestFocus();
-				//directions.setFocusable(false);
-				Font f = directions.getFont();
-				int fontStyle = f.getStyle();
-				if( (fontStyle & Font.BOLD) == Font.BOLD)
-					directions.setFont(f.deriveFont(Font.PLAIN));
-				else
-					directions.setFont(f.deriveFont(Font.BOLD));
+				JToggleButton btn = (JToggleButton) ev.getSource();
+				if(btn.isSelected()) 
+					findArticulationPoints();
 			}
 		});
 
@@ -367,12 +372,13 @@ public abstract class GUI {
 		controls.setBorder(edge);
 
 		JPanel loadquit = new JPanel();
-		loadquit.setLayout(new GridLayout(3, 1));
+		loadquit.setLayout(new GridLayout(4, 1));
 		// manually set a fixed size for the panel containing the load and quit
 		// buttons (doesn't change with window resize).
 		loadquit.setMaximumSize(new Dimension(50, 200));
 		loadquit.add(load);
 		loadquit.add(directions);
+		loadquit.add(artPoints);
 		loadquit.add(quit);
 		controls.add(loadquit);
 		// rigid areas are invisible components that can be used to space
@@ -396,7 +402,7 @@ public abstract class GUI {
 
 		// Added majority of the code below including the new JPanel, JComboBox and grid for the improved search/ drop down suggestions.
 
-		searchResults = new JComboBox();
+		searchResults = new JComboBox<String>();
 		searchResults.setEditable(UPDATE_ON_EVERY_CHARACTER);
 		searchResults.setEnabled(true);
 		searchResults.setSize(20, 5);

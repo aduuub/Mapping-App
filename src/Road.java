@@ -6,7 +6,7 @@ public class Road {
 	private int type;
 	private String label;
 	private String city;
-	private int oneway;
+	public int oneway;
 	private int speed;
 	private int roadClass;
 	private int notForCar;

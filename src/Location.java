@@ -95,7 +95,7 @@ public class Location {
 	 * Return distance between this location and another
 	 */
 	public double distance(Location other) {
-		return Math.hypot(this.x - other.x, this.y - other.y);
+		return Math.abs(Math.hypot(this.x - other.x, this.y - other.y));
 	}
 
 	/**

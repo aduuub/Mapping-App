@@ -35,5 +35,7 @@ public class Segment {
 	public int getOtherNodeId(int id){
 		return this.node1 == id ? node2 : node1;
 	}
-
+	public boolean containsBothNodes(int node1, int node2){
+		return (this.node1 == node1 && this.node2 == node2) || (this.node1 == node2 && this.node2 == node1);
+	}
 }

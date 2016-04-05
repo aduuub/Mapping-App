@@ -5,13 +5,19 @@ public class Node {
 	private int id;
 	private double x;
 	private double y;
+	private Location location;
+	private Set<Segment> segments = new HashSet<Segment>();
+	public Set<Node> neighbours = new HashSet<Node>();
+
 	
+	// for articulation points
+	public int depth;
+	public int numSubtrees;
+	
+	// for path finder
 	public boolean visited;
 	public Node pathFrom;
 	public double cost;
-	
-	private Location location;
-	private Set<Segment> segments = new HashSet<Segment>();
 	
 	public Node(int id, double x, double y){
 		this.id = id;
@@ -20,8 +26,7 @@ public class Node {
 		this.pathFrom = null;
 		this.visited = false;
 		this.cost = 0;
-		location = new Location(x, y);
-		location = location.newFromLatLon(x, y);	
+		location = Location.newFromLatLon(x, y);	
 		
 	}
 	

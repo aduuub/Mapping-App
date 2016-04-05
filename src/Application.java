@@ -1,17 +1,12 @@
 import java.awt.*;
 import java.util.List;
 import java.util.*;
-import java.util.Map.Entry;
-
-import javax.swing.JTextField;
-
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.io.IOException;
 
 /**
  * This is a small example class to demonstrate extending the GUI class and
@@ -20,33 +15,67 @@ import java.io.IOException;
  * @author Adam Wareing
  * @ID 300 337 630
  */
-public class MapProgramv2 extends GUI {
+public class Application extends GUI {
 
-	private static Map<Integer, Node> nodes = new HashMap<Integer, Node>();
+	public static Map<Integer, Node> nodes = new HashMap<Integer, Node>();
 	private static Map<Integer, Road> roads = new HashMap<Integer, Road>();
-	private List<Segment> segments = new ArrayList<Segment>();
+	public static List<Segment> segments = new ArrayList<Segment>();
 	private List<Polygon> polygons = new ArrayList<Polygon>();
-	private List<Set<Segment>> selectedSeg = new ArrayList<Set<Segment>>(); // roads to highlight
+	private List<Set<Segment>> selectedSeg = new ArrayList<Set<Segment>>(); // roads to highlight from search
+	public static Set<Segment> selectedPath = new HashSet<Segment>(); // roads to highlight for path finding
 
-	private double scale = 20; // default zoom
-	private Trie trie; 
-	private searchPath searchPath;
+	private Trie trie; // structure used for the search algorithm
+	private searchPath searchPath; // structure used for finding the path
+	private articulationPoints artPoints; // used for finding the articulation points
+	private boolean displayArticulationPoints = false;
+
+	private double scale = 20; // default zoom	
 	private boolean awaitingClick = false; // used for map directions
-	private Node transitOne;
-	private Node transitTwo;
-	private Location origin = Location.newFromLatLon(-36.847622 , 174.763444); // centre of Auckland location
+	private Node transitOne; // first click node
+	private Node transitTwo; // seconds click node
+	private Location origin = Location.newFromLatLon(-36.847622 , 174.763444); // default centre of Auckland location
 
-	public MapProgramv2() {
+	public Application() {
+
 	}
 
+	/** 
+	 * Redraws the graphics, called every time a move was made
+	 */
 	@Override
-	protected void redraw(Graphics g) {
+	protected void redraw(Graphics g1D) {
+		Graphics2D g = (Graphics2D) g1D;
 		drawPolygons(g);
-		drawNodes(g);
+		// drawNodes(g); not required but code runs as expected.
 		drawSeg(g);
+		drawPathSegments(g);
+		drawSearchSegments(g);
+		if(displayArticulationPoints)
+			drawArtPoints(g);
 	}
 
-	public void drawPolygons(Graphics g){
+	/**
+	 * Draws all the articulation points
+	 */
+	public void drawArtPoints(Graphics g) {
+		g.setColor(Color.red);
+
+		for(Node node : artPoints.articulationPoints){
+			Location nodeLocation = node.getLoc();
+			Point point = nodeLocation.asPoint(origin, scale);
+			g.drawOval((int) point.getX(), (int) point.getY(), 2, 2);
+			System.out.println(node.getID());
+		}					
+
+	}
+
+
+
+	/** 
+	 * Draws the polygons which includes lakes, oceans, parks, reserves etc.
+	 * @param g Graphics
+	 */
+	public void drawPolygons(Graphics2D g){
 		for(Polygon p : polygons){
 			g.setColor(Color.DARK_GRAY);
 			List<Location> locations = p.getCo();
@@ -78,21 +107,20 @@ public class MapProgramv2 extends GUI {
 			case "Type=0x29" : col = new Color(174,209,255); break; // lake 
 			case "Type=0x32" : col = new Color(174,209,255); break;  // lake 
 			default :  col = new Color(202,223,170); break;
-
 			}
 			g.setColor(col);	
 			g.fillPolygon(x,y,locations.size());
 		}
 	}
 
-
-
-	public void drawSeg(Graphics g){
-		Graphics2D g2 = (Graphics2D) g;
-		g2.setColor(Color.blue);
+	/** 
+	 * Draws each individual segment of the road.
+	 * @param g
+	 */
+	public void drawSeg(Graphics2D g){
+		g.setColor(Color.blue);
 		float size = (float) (scale / 100.0);
-		g2.setStroke(new BasicStroke(size));
-		System.out.println(size);
+		g.setStroke(new BasicStroke(size));
 
 		for (Segment s : segments) { 
 
@@ -103,9 +131,7 @@ public class MapProgramv2 extends GUI {
 				Location two = segLoc.get(i);
 				Point p1 = one.asPoint(origin, scale);
 				Point p2 = two.asPoint(origin, scale);
-				int roadID = s.getId();
 
-				Road road = s.road;
 				switch(s.road.getType()){
 
 				case 22 : g.setColor(new Color(213,212,200)); break; // walkway
@@ -114,18 +140,21 @@ public class MapProgramv2 extends GUI {
 				case 9 : g.setColor(new Color(255,255,104)); break; // motorway
 				default: g.setColor(new Color(255,255,255)); break;
 
-				} // close switch
+				}
 
-				g2.drawLine((int)p1.getX(), (int)p1.getY(), (int)p2.getX(), (int)p2.getY());
+				g.drawLine((int)p1.getX(), (int)p1.getY(), (int)p2.getX(), (int)p2.getY());
 
-			} // close for
-		} // close for
+			}
+		}
+	} 
 
-		/* draws the selected segments in red and a thicker line */
-
-		g2.setColor(Color.red);
-		g2.setStroke(new BasicStroke(5));
-
+	/** 
+	 * Draws each individual segment of the roads that have been searched in a highlighted colour
+	 * @param g
+	 */	
+	public void drawSearchSegments(Graphics2D g){
+		g.setColor(Color.red);
+		g.setStroke(new BasicStroke(3));
 		for (Set<Segment> setOfSeg : selectedSeg) {
 			for(Segment s1 : setOfSeg){
 				ArrayList<Location> segLoc1 = s1.getLocations();
@@ -134,28 +163,52 @@ public class MapProgramv2 extends GUI {
 					Location two = segLoc1.get(i);
 					Point p1 = one.asPoint(origin, scale);
 					Point p2 = two.asPoint(origin, scale);
-					g2.drawLine((int)p1.getX(), (int)p1.getY(), (int)p2.getX(), (int)p2.getY());
-				} // close for
-
-			} // close for
+					g.drawLine((int)p1.getX(), (int)p1.getY(), (int)p2.getX(), (int)p2.getY());
+				} 
+			} 
 		}
-
-
-	} // close method
-
-
-	public void drawNodes(Graphics g){
-		g.setColor(new Color(255,255,255));
-
-		//		for (Map.Entry<Integer, Node> entry : nodes.entrySet()) { // itterate all nodes
-		//			Node node = entry.getValue();		
-		//			Location nodeLocation = node.getLoc();
-		//			Point point = nodeLocation.asPoint(origin, scale);
-		//			g.drawOval((int) point.getX(), (int) point.getY(), 2, 2);
-		//
-		//		}		
 	}
 
+	/** 
+	 * Draws each individual segment of the roads involved on the selected path to a destination in a highlighted colour.
+	 * @param g
+	 */		
+	public void drawPathSegments(Graphics2D g){
+		g.setColor(Color.red);
+		g.setStroke(new BasicStroke(3));
+		for (Segment s : selectedPath) {
+			ArrayList<Location> segLoc = s.getLocations();
+			for(int i = 1; i < segLoc.size(); i++){
+				Location one = segLoc.get(i-1);
+				Location two = segLoc.get(i);
+				Point p1 = one.asPoint(origin, scale);
+				Point p2 = two.asPoint(origin, scale);
+				g.drawLine((int)p1.getX(), (int)p1.getY(), (int)p2.getX(), (int)p2.getY());
+			} 
+		}
+	}
+
+
+	/** 
+	 * Draws all of the nodes (road intersections)
+	 * Not required to be drawn, as the roads naturally form the intersections anyway.
+	 * @param g
+	 */	
+	public void drawNodes(Graphics2D g){
+		g.setColor(new Color(255,255,255));
+
+		for (Map.Entry<Integer, Node> entry : nodes.entrySet()) { 
+			Node node = entry.getValue();		
+			Location nodeLocation = node.getLoc();
+			Point point = nodeLocation.asPoint(origin, scale);
+			g.drawOval((int) point.getX(), (int) point.getY(), 2, 2);
+		}		
+	}
+
+	/** 
+	 * Abstract method declared in GUI.
+	 * Called on the event of a scroll, delegates the work to the onMove method.
+	 */
 	@Override
 	protected void onScroll(MouseWheelEvent e) {
 		int notches = e.getWheelRotation();	
@@ -165,49 +218,92 @@ public class MapProgramv2 extends GUI {
 			onMove(GUI.Move.ZOOM_IN);
 	}
 
+	/** 
+	 * Abstract method declared in GUI.
+	 * Called on the event of a click, delegates the work to the onMove method.
+	 */
 	@Override
 	protected void onClick(MouseEvent e) {
-		int x = e.getX();
-		int y = e.getY();
 
-		double closestDistance = 99999999;
+		double closestDistance = Double.MAX_VALUE;
 		Node closestNode = null;
-		Point p = new Point(x,y);
-		Location c = new Location(0,0);
-		Location click = c.newFromPoint(p, origin, scale);
+		Location click = Location.newFromPoint(new Point(e.getX() , e.getY()), origin, scale);
 
 		for (Map.Entry<Integer, Node> entry : nodes.entrySet()) {  
 			Node tempNode = entry.getValue();
 			Location tempNodeLoc = tempNode.getLoc(); 	
-			if(tempNodeLoc.distance(click) < closestDistance){
+			if(tempNodeLoc.distance(click) < closestDistance){ // if its closer from the current node compared to the current shortest
 				closestDistance = tempNodeLoc.distance(click);
 				closestNode = tempNode;				
 			}
 		}
 
-		if(closestNode == null){
-			getTextOutputArea().setText("No intersections found"); 
-			return;
+		if(closestNode == null) 
+			getTextOutputArea().setText("No intersections found. Please try again."); 
+
+		if(awaitingClick) // if in navigation mode
+			transit(closestNode);
+		else // otherwise show connecting roads
+			connectedRoads(closestNode);
+	}
+
+
+	/** 
+	 * Finds the all articulation points
+	 */
+	@Override
+	public void findArticulationPoints(){
+		if(artPoints == null){
+			artPoints = new articulationPoints();
+			artPoints.startSearch();
+		}
+		displayArticulationPoints = !displayArticulationPoints;
+		redraw();
+	}
+
+	/** 
+	 * Used for the transit between the two nodes selected 
+	 * @param closestNode
+	 */
+	public void transit(Node closestNode){
+
+		if(transitOne == null && transitTwo == null){
+			transitOne = closestNode;
+			getTextOutputArea().setText("Start Point is: " + closestNode.getID());
+		}
+		else if(transitOne != null && transitTwo == null){
+			transitTwo = closestNode;
+			getTextOutputArea().setText("End Point is: " + closestNode.getID());
+			calculateShortestPath();
+
+			String pathTaken = "";
+			double totalLength = 0;
+
+			Set<Integer> roadIdsOnPath = new HashSet<Integer>();
+
+			for(Segment s : selectedPath){
+
+				Road road = getRoad(s.roadID);
+				
+				if(!roadIdsOnPath.contains(road.getID())) // prevents duplicates
+						pathTaken += "\n" + road.getLabel() + " ( " +  s.length*1000 + " m )";
+				
+				roadIdsOnPath.add(road.getID());
+				totalLength += s.length;
+			}
+
+			getTextOutputArea().setText("The shortest path with length " + totalLength + " km is:");
+			getTextOutputArea().append(pathTaken);
+
 		}
 
+	}
 
-		if(awaitingClick){ // the user is wanting directions to be shown, not the connecting intersections
-			if((transitOne != null && transitTwo != null) || (transitOne == null && transitTwo == null)){
-				transitOne = closestNode;
-				transitTwo = null;
-				getTextOutputArea().setText("Start Point is: " + closestNode.getID());
-				return;
-			}
-			else if(transitOne != null && transitTwo == null){
-				transitTwo = closestNode;
-				awaitingClick = false;
-				getTextOutputArea().setText("End Point is: " + closestNode.getID());
-				calculateShortestPath();
-				return;
-			}
-
-		}		
-
+	/** 
+	 * Displays the connecting codes from the param.
+	 * @param closestNode
+	 */
+	public void connectedRoads(Node closestNode){
 		Set<Segment> segments = closestNode.getSeg(); // gets segments related to that node
 		Set<Integer> roadIDs = new HashSet<Integer>(); // for the road id's related to that segment
 		String printText = "Connecting roads are: "; // text that will display connecting roads
@@ -228,28 +324,30 @@ public class MapProgramv2 extends GUI {
 
 	}
 
-	/** Calculates the shortest path of roads from one intersection to another
+	/** 
+	 * Calculates the shortest from one intersection to another
 	 */
 	public void calculateShortestPath() {
-		double dist = -2;
-		double direct = -2;
+		double dist = -2; // shortest path using the roads
+		double direct = -2; // direct path from first click to second click
+
 		if(transitOne != null && transitTwo != null){
 			dist = searchPath.calculateDistance(transitOne, transitTwo);
 			direct = transitOne.getLoc().distance(transitTwo.getLoc());
-		}
-		getTextOutputArea().append("\nThe shortest path is " + dist + " km.");
-		getTextOutputArea().append("\nIn a direct line the path is " + direct + " km.");
 
+			getTextOutputArea().append("\nThe shortest path is " + dist + " km.");
+			getTextOutputArea().append("\nIn a direct line the path is " + direct + " km.");
+		}
 	}
 
-	/** Called on key press to load the potential roads
+	/** 
+	 * Called on key press to search for matching/ predicted roads
 	 * @return String[] of road names matching input text
 	 */
 	@Override
 	protected String[] onSearch() {
 		selectedSeg.clear();
 		String inputText = getSearchBox();
-		System.out.println(inputText);
 		String[] results =  trie.getWord(inputText);	
 		ArrayList<String> selectedRoadName = new ArrayList<String>();
 
@@ -263,8 +361,10 @@ public class MapProgramv2 extends GUI {
 		return results;
 	}
 
-	/** Called when the user wants to shift the GUI
-	 * 
+
+	/**
+	 *  Called when the user wants to shift the GUI 
+	 *  @param m : NORTH, SOUTH, EAST, WEST, ZOOM_IN, ZOOM_OUT
 	 */
 	@Override
 	protected void onMove(Move m) {
@@ -279,29 +379,49 @@ public class MapProgramv2 extends GUI {
 		case ZOOM_OUT: scale = scale / 1.5; break; 
 		}
 		if(scale == 0){scale = 5;} // so there is no divide by zero errors
-		System.out.println(scale);
 	}
 
 	/**
-	 * Used to toggle when the user wants transit instructions or not
+	 * Used to toggle whether the user wants transit instructions or not
 	 */
 	@Override
 	protected void directions(){
-		transitOne = null;
-		transitTwo = null;
-		this.awaitingClick = !this.awaitingClick;
-		if(!awaitingClick)
+		transitOne = transitTwo = null;
+		if(awaitingClick){
+			selectedPath.clear();
 			getTextOutputArea().setText("");
+		}
+
+		this.awaitingClick = !this.awaitingClick;
 	}
 
-	/** Loads the files 
-	 * 
+	/** 
+	 * Loads the files (nodes, roads, segments, polygons)
 	 */
 	@Override
 	protected void onLoad(File nodesFile, File roadsFile, File segmentsFile, File polygonsFile)  {
-		getTextOutputArea().setText("Loading intersections \n"); 
 
-		// Loading the nodes
+		loadNodes(nodesFile);
+		loadRoads(roadsFile);
+		loadSegments(segmentsFile);
+		loadTrie();
+		loadPolygons(polygonsFile);
+		addNodeNeighbours();
+
+		getTextOutputArea().append("Preparing to index the path finding algorithm \n"); 
+		searchPath = new searchPath(nodes);
+		getTextOutputArea().append("Path finding indexed successfully \n"); 
+
+		getTextOutputArea().setText("Sucessfully loaded \n"); 
+
+
+	}
+
+	/**
+	 * Loads the road intersections
+	 * @param nodesFile
+	 */
+	public void loadNodes(File nodesFile){
 		BufferedReader data;
 		try {
 			String line = null;
@@ -313,22 +433,28 @@ public class MapProgramv2 extends GUI {
 				double lat = Double.parseDouble(values[1]);
 				double lng = Double.parseDouble(values[2]);
 				Node node = new Node(nodeID, lat, lng);
-				this.nodes.put(nodeID, node);
+				Application.nodes.put(nodeID, node);
 
 			}
+			data.close();
+			getTextOutputArea().append("Loaded intersections sucesssfully \n"); 
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch(Exception e){
 			e.printStackTrace();
 		}
-		getTextOutputArea().append("Loaded intersections sucesssfully \n"); 
+
+	}
+
+	/**
+	 * Loads the main roads (these are not drawn on the GUI- thats the road segments).
+	 * @param roadsFile
+	 */
+	public void loadRoads(File roadsFile){
 		getTextOutputArea().append("Loading roads \n"); 
-
-
-		// Loading the roads
 		try {
 			String line = null;
-			data = new BufferedReader(new FileReader(roadsFile));
+			BufferedReader data = new BufferedReader(new FileReader(roadsFile));
 			line = data.readLine(); //skips the first line with file names
 
 			while ((line = data.readLine()) != null) {
@@ -347,20 +473,25 @@ public class MapProgramv2 extends GUI {
 				Road road = new Road(roadID, type, label, city, oneWay, speed, roadClass, notForCar, notForPde, notForBicy );
 				roads.put(roadID, road);
 			}
+			data.close();
+			getTextOutputArea().append("Loaded roads sucesssfully \n"); 
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch(Exception e){
 			e.printStackTrace();
 		}
 
-		getTextOutputArea().append("Loaded roads sucesssfully \n"); 
-		getTextOutputArea().append("Loading road segments \n"); 
-		int segCount = 0;
+	}
 
-		// Loading the segments
+	/**
+	 * Loads the road segments
+	 * @param segmentsFile
+	 */
+	public void loadSegments(File segmentsFile){
 		try {
+			getTextOutputArea().append("Loading road segments \n"); 
 			String line = null;
-			data = new BufferedReader(new FileReader(segmentsFile));
+			BufferedReader data = new BufferedReader(new FileReader(segmentsFile));
 			line = data.readLine(); //skips the first line with file names
 
 			while ((line = data.readLine()) != null) {
@@ -412,43 +543,34 @@ public class MapProgramv2 extends GUI {
 				}
 
 			}
+			data.close();
+			getTextOutputArea().append("Loaded segments sucesssfully\n"); 
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch(Exception e){
 			e.printStackTrace();
 		}
-		getTextOutputArea().append("Loaded segments sucesssfully\n"); 
-		getTextOutputArea().append("Preparing search\n"); 
-		loadTrie();
-		getTextOutputArea().append("Search loaded sucessfully \n"); 
-		getTextOutputArea().append("Preparing objects \n"); 
-		loadPolygons(polygonsFile);
-		getTextOutputArea().append("Loaded objects sucesssfully \n"); 
-		getTextOutputArea().append("Preparing to index the path finding algorithm \n"); 
-		searchPath = new searchPath(nodes);
-		getTextOutputArea().append("Path finding indexed successfully \n"); 
-
 	}
 
 
+	/** 
+	 * Loads the polygon data (lakes, rivers, reserves, parks etc.)
+	 * @param polygonsFile
+	 */
 	public void loadPolygons(File polygonsFile){
-		int lineCount = 0;
+		getTextOutputArea().append("Loading objects \n"); 
 		try {
+			@SuppressWarnings("unused")
 			String line = null;
 			BufferedReader data = new BufferedReader(new FileReader(polygonsFile));
 
 			while ((line = data.readLine()) != null) {
-				lineCount++;
 				String endLevel = "";
 				String label = "";
 				String cityID = "";
 				String polygonData = "";
 				boolean hasData = false;
 
-
-				if(!line.equals("[POLYGON]")){
-					System.out.println("ERROR STRT");
-				}
 				ArrayList<Location> coordinates = new ArrayList<Location>();
 
 				String type = data.readLine();
@@ -483,11 +605,6 @@ public class MapProgramv2 extends GUI {
 
 				if(hasData){
 
-					if(polygonData.length() < 10){
-						System.out.println("ERROR 99");
-						System.out.println(polygonData);
-					}
-
 					polygonData = polygonData.substring(6, polygonData.length()-1);  // removes the "Data="
 					String[] co = polygonData.split(","); 
 					for(int i = 0; i < co.length; i++){
@@ -515,6 +632,8 @@ public class MapProgramv2 extends GUI {
 				data.readLine(); // skips whitespace
 				polygons.add(new Polygon(type, endLevel, cityID, coordinates)); // creates and adds the new polygon						
 			}
+			data.close();
+			getTextOutputArea().append("Loaded objects sucesssfully \n"); 
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch(Exception e){
@@ -523,14 +642,39 @@ public class MapProgramv2 extends GUI {
 
 	}
 
+	/**
+	 * Adds references to the all nodes in the sets neighbours
+	 */	
+	public void addNodeNeighbours(){
+		for(Map.Entry<Integer, Node> entry : nodes.entrySet()){
+			Node node = entry.getValue();
+			for(Segment s : node.getSeg()){
+				int otherNodeID  = s.getOtherNodeId(node.getID());
+				Node neighNode = getNode(otherNodeID);
+				node.neighbours.add(neighNode);
+			}	
+		}
+
+	}
+
+	/**
+	 * Indexes the search
+	 */
 	public void loadTrie(){
+		getTextOutputArea().append("Preparing search\n"); 
 		trie = new Trie(); // global variable declared in header
 		for (Map.Entry<Integer, Road> entry : roads.entrySet()) {
 			String roadName = entry.getValue().getLabel();
 			trie.addWord(roadName);
 		}
+		getTextOutputArea().append("Search loaded sucessfully \n"); 
+
 	}
 
+	/**
+	 * @param id
+	 * @return the corresponding road to the id
+	 */
 	public static Road getRoad(int id){
 
 		for(Map.Entry<Integer, Road> r : roads.entrySet() ){
@@ -539,7 +683,11 @@ public class MapProgramv2 extends GUI {
 		}
 		return null;
 	}
-	
+
+	/**
+	 * @param id
+	 * @return the corresponding Node to the id
+	 */
 	public static Node getNode(int id){
 
 		for(Map.Entry<Integer, Node> n : nodes.entrySet() ){
@@ -548,8 +696,9 @@ public class MapProgramv2 extends GUI {
 		}
 		return null;
 	}
-	
+
+
 	public static void main(String[] args) {
-		new MapProgramv2();
+		new Application();
 	}
 }
