@@ -104,8 +104,8 @@ public abstract class GUI {
 	 * @param polygons
 	 *            a File for polygon-shapes.mp
 	 */
-	protected abstract void onLoad(File nodes, File roads, File segments,
-			File polygons);
+	protected abstract void onLoad(File nodesFile, File roadsFile, File segmentsFile, File polygonsFile, File restrictionsFile);
+
 
 	// here are some useful methods you'll need.
 
@@ -157,6 +157,8 @@ public abstract class GUI {
 	private static final String ROADS_FILENAME = "roadID-roadInfo.tab";
 	private static final String SEGS_FILENAME = "roadSeg-roadID-length-nodeID-nodeID-coords.tab";
 	private static final String POLYS_FILENAME = "polygon-shapes.mp";
+	private static final String REST_FILENAME = "restrictions.tab";
+
 
 	private String[] results;
 	/*
@@ -209,7 +211,7 @@ public abstract class GUI {
 		JButton load = new JButton("Load");
 		load.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent ev) {
-				File nodes = null, roads = null, segments = null, polygons = null;
+				File nodes = null, roads = null, segments = null, polygons = null, restrictions = null;
 
 				// set up the file chooser
 				fileChooser.setCurrentDirectory(new File("."));
@@ -232,6 +234,8 @@ public abstract class GUI {
 							segments = f;
 						} else if (f.getName().equals(POLYS_FILENAME)) {
 							polygons = f;
+						} else if (f.getName().equals(REST_FILENAME)) {
+							restrictions = f;
 						}
 					}
 
@@ -242,7 +246,7 @@ public abstract class GUI {
 								"Directory does not contain correct files",
 								"Error", JOptionPane.ERROR_MESSAGE);
 					} else {
-						onLoad(nodes, roads, segments, polygons);
+						onLoad(nodes, roads, segments, polygons, restrictions);
 						redraw();
 					}
 				}

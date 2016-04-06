@@ -54,7 +54,8 @@ public class searchPath {
 
 
 			if(!node.visited){
-
+	
+				
 				// node.visited ←true, node.pathFrom←from, node.cost←costToHere
 				node.visited = true;
 				node.pathFrom = queueStruct.from;
@@ -78,6 +79,20 @@ public class searchPath {
 					// if not neigh.visited then
 					if(!neighbour.visited){
 
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
 						if((oneWayRoad && s.node1 == otherNodeID) || !oneWayRoad ){ // is the segment one way?
 
 							// costToNeigh ← costToHere + edge.weight

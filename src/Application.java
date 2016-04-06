@@ -7,6 +7,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.IOException;
 
 /**
  * This is a small example class to demonstrate extending the GUI class and
@@ -23,6 +24,8 @@ public class Application extends GUI {
 	private List<Polygon> polygons = new ArrayList<Polygon>();
 	private List<Set<Segment>> selectedSeg = new ArrayList<Set<Segment>>(); // roads to highlight from search
 	public static Set<Segment> selectedPath = new HashSet<Segment>(); // roads to highlight for path finding
+	private static Map<Integer, Restriction> restrictions = new HashMap<Integer, Restriction>();
+
 
 	private Trie trie; // structure used for the search algorithm
 	private searchPath searchPath; // structure used for finding the path
@@ -59,7 +62,7 @@ public class Application extends GUI {
 	 */
 	public void drawArtPoints(Graphics g) {
 		g.setColor(Color.red);
-		
+
 		if(displayArticulationPoints){
 
 			for(Node node : artPoints.articulationPoints){
@@ -403,13 +406,14 @@ public class Application extends GUI {
 	 * Loads the files (nodes, roads, segments, polygons)
 	 */
 	@Override
-	protected void onLoad(File nodesFile, File roadsFile, File segmentsFile, File polygonsFile)  {
+	protected void onLoad(File nodesFile, File roadsFile, File segmentsFile, File polygonsFile, File restrictionsFile)  {
 
 		loadNodes(nodesFile);
 		loadRoads(roadsFile);
 		loadSegments(segmentsFile);
 		loadTrie();
 		loadPolygons(polygonsFile);
+		loadRestrictions(restrictionsFile);
 		addNodeNeighbours();
 
 		getTextOutputArea().append("Preparing to index the path finding algorithm \n"); 
@@ -665,12 +669,37 @@ public class Application extends GUI {
 	 * Indexes the search
 	 */
 	public void loadTrie(){
-		getTextOutputArea().append("Preparing search\n"); 
+		getTextOutputArea().append("Loading search\n"); 
 		trie = new Trie(); // global variable declared in header
 		for (Map.Entry<Integer, Road> entry : roads.entrySet()) {
 			String roadName = entry.getValue().getLabel();
 			trie.addWord(roadName);
 		}
+		getTextOutputArea().append("Search loaded sucessfully \n"); 
+
+	}
+
+
+	/**
+	 * Indexes the restrictions
+	 */
+	public void loadRestrictions(File restrictionsFile){
+		getTextOutputArea().append("Loading restrictions\n"); 
+		try{
+			Scanner scan = new Scanner(restrictionsFile);
+			while(scan.hasNextInt()){
+				int nodeID1 = scan.nextInt();
+				int roadID1  = scan.nextInt();
+				int nodeID = scan.nextInt();
+				int roadID2 = scan.nextInt();
+				int nodeID2 = scan.nextInt();		
+				restrictions.put(nodeID, new Restriction(nodeID1, roadID1, nodeID, roadID2, nodeID2));
+			}
+		}catch(IOException e){
+			getTextOutputArea().append("Error reading the restrictions file");
+			return;
+		}
+
 		getTextOutputArea().append("Search loaded sucessfully \n"); 
 
 	}
