@@ -8,13 +8,10 @@ public class stackStruct {
 	public Queue<Node> children;
 
 	
-	public stackStruct(Node node, int reach, stackStruct parent, int depth, Queue<Node> children){
+	public stackStruct(Node node, int reach, stackStruct parent){
 		this.node = node;
 		this.reach = reach;
 		this.parent = parent;
-		this.depth = depth;
-		this.children = children;	
-
 	}	
 	
 

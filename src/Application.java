@@ -46,8 +46,8 @@ public class Application extends GUI {
 	protected void redraw(Graphics g1D) {
 		Graphics2D g = (Graphics2D) g1D;
 		drawPolygons(g);
-		// drawNodes(g); not required but code runs as expected.
 		drawSeg(g);
+		// drawNodes(g); // not required but code runs as expected.
 		drawPathSegments(g);
 		drawSearchSegments(g);
 		if(displayArticulationPoints)
@@ -59,14 +59,16 @@ public class Application extends GUI {
 	 */
 	public void drawArtPoints(Graphics g) {
 		g.setColor(Color.red);
+		
+		if(displayArticulationPoints){
 
-		for(Node node : artPoints.articulationPoints){
-			Location nodeLocation = node.getLoc();
-			Point point = nodeLocation.asPoint(origin, scale);
-			g.drawOval((int) point.getX(), (int) point.getY(), 2, 2);
-			System.out.println(node.getID());
-		}					
-
+			for(Node node : artPoints.articulationPoints){
+				Location nodeLocation = node.getLoc();
+				Point point = nodeLocation.asPoint(origin, scale);
+				g.drawOval((int) point.getX(), (int) point.getY(), 2, 2);
+				System.out.println(node.getID());
+			}			
+		}
 	}
 
 
@@ -195,13 +197,13 @@ public class Application extends GUI {
 	 * @param g
 	 */	
 	public void drawNodes(Graphics2D g){
-		g.setColor(new Color(255,255,255));
+		g.setColor(Color.blue);
 
 		for (Map.Entry<Integer, Node> entry : nodes.entrySet()) { 
 			Node node = entry.getValue();		
 			Location nodeLocation = node.getLoc();
 			Point point = nodeLocation.asPoint(origin, scale);
-			g.drawOval((int) point.getX(), (int) point.getY(), 2, 2);
+			g.fillRect((int) point.getX(), (int) point.getY(), 3, 3);
 		}		
 	}
 
@@ -256,7 +258,9 @@ public class Application extends GUI {
 		if(artPoints == null){
 			artPoints = new articulationPoints();
 			artPoints.startSearch();
+			getTextOutputArea().append("There are: " + artPoints.numOfArtPoints + " articulation points found.");
 		}
+
 		displayArticulationPoints = !displayArticulationPoints;
 		redraw();
 	}
@@ -284,10 +288,10 @@ public class Application extends GUI {
 			for(Segment s : selectedPath){
 
 				Road road = getRoad(s.roadID);
-				
+
 				if(!roadIdsOnPath.contains(road.getID())) // prevents duplicates
-						pathTaken += "\n" + road.getLabel() + " ( " +  s.length*1000 + " m )";
-				
+					pathTaken += "\n" + road.getLabel() + " ( " +  s.length*1000 + " m )";
+
 				roadIdsOnPath.add(road.getID());
 				totalLength += s.length;
 			}
