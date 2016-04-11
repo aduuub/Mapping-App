@@ -21,7 +21,6 @@ public class Segment {
 			locations.add(tempLocation);
 		}
 		road = rd;
-		System.out.println("");
 	}
 
 

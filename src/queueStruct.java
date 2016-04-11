@@ -5,7 +5,6 @@ public class queueStruct implements Comparator<queueStruct>, Comparable<queueStr
 	public queueStruct structFrom;
 	public Segment segmentFrom;
 	public Node from;
-
 	public double costToHere;
 	public double estimateTotal;
 	

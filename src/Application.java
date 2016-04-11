@@ -24,7 +24,7 @@ public class Application extends GUI {
 	private List<Polygon> polygons = new ArrayList<Polygon>();
 	private List<Set<Segment>> selectedSeg = new ArrayList<Set<Segment>>(); // roads to highlight from search
 	public static Set<Segment> selectedPath = new HashSet<Segment>(); // roads to highlight for path finding
-	private static Map<Integer, Restriction> restrictions = new HashMap<Integer, Restriction>();
+	public static Map<Integer, Restriction> restrictions = new HashMap<Integer, Restriction>();
 
 
 	private Trie trie; // structure used for the search algorithm
@@ -69,7 +69,6 @@ public class Application extends GUI {
 				Location nodeLocation = node.getLoc();
 				Point point = nodeLocation.asPoint(origin, scale);
 				g.drawOval((int) point.getX(), (int) point.getY(), 2, 2);
-				System.out.println(node.getID());
 			}			
 		}
 	}
@@ -208,11 +207,16 @@ public class Application extends GUI {
 			Point point = nodeLocation.asPoint(origin, scale);
 			g.fillRect((int) point.getX(), (int) point.getY(), 3, 3);
 		}		
+		g.setColor(Color.red);
+
+		if(segments.size() == 0)
+			return;			
 	}
 
 	/** 
 	 * Abstract method declared in GUI.
 	 * Called on the event of a scroll, delegates the work to the onMove method.
+	 * @param e
 	 */
 	@Override
 	protected void onScroll(MouseWheelEvent e) {
@@ -226,6 +230,7 @@ public class Application extends GUI {
 	/** 
 	 * Abstract method declared in GUI.
 	 * Called on the event of a click, delegates the work to the onMove method.
+	 * @param e
 	 */
 	@Override
 	protected void onClick(MouseEvent e) {
@@ -261,7 +266,7 @@ public class Application extends GUI {
 		if(artPoints == null){
 			artPoints = new articulationPoints();
 			artPoints.startSearch();
-			getTextOutputArea().append("There are: " + artPoints.numOfArtPoints + " articulation points found.");
+			getTextOutputArea().append("Currently displaying the articulation points.");
 		}
 
 		displayArticulationPoints = !displayArticulationPoints;
@@ -299,7 +304,7 @@ public class Application extends GUI {
 				totalLength += s.length;
 			}
 
-			getTextOutputArea().setText("The shortest path with length " + totalLength + " km is:");
+			// getTextOutputArea().setText("The shortest path with length " + totalLength + " km is:");
 			getTextOutputArea().append(pathTaken);
 
 		}
@@ -561,177 +566,172 @@ public class Application extends GUI {
 	}
 
 
-	/** 
-	 * Loads the polygon data (lakes, rivers, reserves, parks etc.)
-	 * @param polygonsFile
-	 */
-	public void loadPolygons(File polygonsFile){
-		getTextOutputArea().append("Loading objects \n"); 
-		try {
-			@SuppressWarnings("unused")
-			String line = null;
-			BufferedReader data = new BufferedReader(new FileReader(polygonsFile));
 
-			while ((line = data.readLine()) != null) {
-				String endLevel = "";
-				String label = "";
-				String cityID = "";
-				String polygonData = "";
-				boolean hasData = false;
+/** 
+ * Loads the polygon data (lakes, rivers, reserves, parks etc.)
+ * @param polygonsFile
+ */
+public void loadPolygons(File polygonsFile){
+	getTextOutputArea().append("Loading objects \n"); 
+	try {
+		@SuppressWarnings("unused")
+		String line = null;
+		BufferedReader data = new BufferedReader(new FileReader(polygonsFile));
 
-				ArrayList<Location> coordinates = new ArrayList<Location>();
+		while ((line = data.readLine()) != null) {
+			String endLevel = "";
+			String label = "";
+			String cityID = "";
+			String polygonData = "";
+			boolean hasData = false;
 
-				String type = data.readLine();
-				if(!type.startsWith("Type=")){
-					label = type;
-					type = "";
-				}
+			ArrayList<Location> coordinates = new ArrayList<Location>();
 
-				label = data.readLine();
-				if(!label.startsWith("Label=")){
-					endLevel = label;
-					label = "";
-				}
-
-				endLevel = data.readLine();
-				if(!endLevel.startsWith("EndLevel=")){
-					cityID = endLevel;
-					endLevel = "";
-
-				}
-				cityID = data.readLine();
-				if(!cityID.startsWith("CityIdx")){
-					polygonData = cityID;
-					cityID = "";
-				}
-				else{
-					polygonData = data.readLine();
-				}
-
-				if(polygonData.startsWith("Data"))
-					hasData = true;
-
-				if(hasData){
-
-					polygonData = polygonData.substring(6, polygonData.length()-1);  // removes the "Data="
-					String[] co = polygonData.split(","); 
-					for(int i = 0; i < co.length; i++){
-						if(co[i].startsWith("(")) 
-							co[i] = co[i].substring(1, co[i].length()-1); // removes the brackets
-						else if(co[i].endsWith(")"))
-							co[i] = co[i].substring(0, co[i].length()-2); // removes the brackets
-					}
-
-					for(int i = 1; i < co.length; i+=2){ // gets the co ordinates as doubles from co
-						double one = Double.parseDouble(co[i-1]);
-						double two = Double.parseDouble(co[i]);
-						Location l = Location.newFromLatLon(one, two);
-						coordinates.add(l);
-					}
-				}
-
-				String end = data.readLine();
-				while(true){ // skips [end]
-					if(end.compareTo("[END]") == 0)
-						break;
-					end = data.readLine();
-				}	
-
-				data.readLine(); // skips whitespace
-				polygons.add(new Polygon(type, endLevel, cityID, coordinates)); // creates and adds the new polygon						
+			String type = data.readLine();
+			if(!type.startsWith("Type=")){
+				label = type;
+				type = "";
 			}
-			data.close();
-			getTextOutputArea().append("Loaded objects sucesssfully \n"); 
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		} catch(Exception e){
-			e.printStackTrace();
-		}	
 
-	}
+			label = data.readLine();
+			if(!label.startsWith("Label=")){
+				endLevel = label;
+				label = "";
+			}
 
-	/**
-	 * Adds references to the all nodes in the sets neighbours
-	 */	
-	public void addNodeNeighbours(){
-		for(Map.Entry<Integer, Node> entry : nodes.entrySet()){
-			Node node = entry.getValue();
-			for(Segment s : node.getSeg()){
-				int otherNodeID  = s.getOtherNodeId(node.getID());
-				Node neighNode = getNode(otherNodeID);
-				node.neighbours.add(neighNode);
+			endLevel = data.readLine();
+			if(!endLevel.startsWith("EndLevel=")){
+				cityID = endLevel;
+				endLevel = "";
+
+			}
+			cityID = data.readLine();
+			if(!cityID.startsWith("CityIdx")){
+				polygonData = cityID;
+				cityID = "";
+			}
+			else{
+				polygonData = data.readLine();
+			}
+
+			if(polygonData.startsWith("Data"))
+				hasData = true;
+
+			if(hasData){
+
+				polygonData = polygonData.substring(6, polygonData.length()-1);  // removes the "Data="
+				String[] co = polygonData.split(","); 
+				for(int i = 0; i < co.length; i++){
+					if(co[i].startsWith("(")) 
+						co[i] = co[i].substring(1, co[i].length()-1); // removes the brackets
+					else if(co[i].endsWith(")"))
+						co[i] = co[i].substring(0, co[i].length()-2); // removes the brackets
+				}
+
+				for(int i = 1; i < co.length; i+=2){ // gets the co ordinates as doubles from co
+					double one = Double.parseDouble(co[i-1]);
+					double two = Double.parseDouble(co[i]);
+					Location l = Location.newFromLatLon(one, two);
+					coordinates.add(l);
+				}
+			}
+
+			String end = data.readLine();
+			while(true){ // skips [end]
+				if(end.compareTo("[END]") == 0)
+					break;
+				end = data.readLine();
 			}	
+
+			data.readLine(); // skips whitespace
+			polygons.add(new Polygon(type, endLevel, cityID, coordinates)); // creates and adds the new polygon						
 		}
+		data.close();
+		getTextOutputArea().append("Loaded objects sucesssfully \n"); 
+	} catch (FileNotFoundException e) {
+		e.printStackTrace();
+	} catch(Exception e){
+		e.printStackTrace();
+	}	
 
+}
+
+/**
+ * Adds references to the all nodes in the sets neighbours
+ */	
+public void addNodeNeighbours(){
+	for(Map.Entry<Integer, Node> entry : nodes.entrySet()){
+		Node node = entry.getValue();
+		for(Segment s : node.getSeg()){
+			int otherNodeID  = s.getOtherNodeId(node.getID());
+			Node neighNode = getNode(otherNodeID);
+			node.neighbours.add(neighNode);
+		}	
 	}
 
-	/**
-	 * Indexes the search
-	 */
-	public void loadTrie(){
-		getTextOutputArea().append("Loading search\n"); 
-		trie = new Trie(); // global variable declared in header
-		for (Map.Entry<Integer, Road> entry : roads.entrySet()) {
-			String roadName = entry.getValue().getLabel();
-			trie.addWord(roadName);
+}
+
+/**
+ * Indexes the search
+ */
+public void loadTrie(){
+	getTextOutputArea().append("Loading search\n"); 
+	trie = new Trie(); // global variable declared in header
+	for (Map.Entry<Integer, Road> entry : roads.entrySet()) {
+		String roadName = entry.getValue().getLabel();
+		trie.addWord(roadName);
+	}
+	getTextOutputArea().append("Search loaded sucessfully \n"); 
+
+}
+
+
+/**
+ * Indexes the restrictions
+ */
+public void loadRestrictions(File restrictionsFile){
+	getTextOutputArea().append("Loading restrictions\n"); 
+	if(restrictionsFile == null)
+		return;
+	try{
+		Scanner scan = new Scanner(restrictionsFile);
+		scan.nextLine();
+		while(scan.hasNext()){
+			int nodeID1 = scan.nextInt();
+			int roadID1  = scan.nextInt();
+			int nodeID = scan.nextInt();
+			int roadID2 = scan.nextInt();
+			int nodeID2 = scan.nextInt();		
+			restrictions.put(nodeID, new Restriction(nodeID1, roadID1, nodeID, roadID2, nodeID2));
 		}
-		getTextOutputArea().append("Search loaded sucessfully \n"); 
-
+		scan.close();
+	}catch(IOException e){
+		getTextOutputArea().append("Error reading the restrictions file");
+		return;
 	}
 
+	getTextOutputArea().append("Search loaded sucessfully \n"); 
 
-	/**
-	 * Indexes the restrictions
-	 */
-	public void loadRestrictions(File restrictionsFile){
-		getTextOutputArea().append("Loading restrictions\n"); 
-		try{
-			Scanner scan = new Scanner(restrictionsFile);
-			while(scan.hasNextInt()){
-				int nodeID1 = scan.nextInt();
-				int roadID1  = scan.nextInt();
-				int nodeID = scan.nextInt();
-				int roadID2 = scan.nextInt();
-				int nodeID2 = scan.nextInt();		
-				restrictions.put(nodeID, new Restriction(nodeID1, roadID1, nodeID, roadID2, nodeID2));
-			}
-		}catch(IOException e){
-			getTextOutputArea().append("Error reading the restrictions file");
-			return;
-		}
+}
 
-		getTextOutputArea().append("Search loaded sucessfully \n"); 
+/**
+ * @param id
+ * @return the corresponding road to the id
+ */
+public static Road getRoad(int id){		
+	return roads.get(id);			
+}
 
-	}
-
-	/**
-	 * @param id
-	 * @return the corresponding road to the id
-	 */
-	public static Road getRoad(int id){
-
-		for(Map.Entry<Integer, Road> r : roads.entrySet() ){
-			if(r.getKey() == id)
-				return r.getValue();
-		}
-		return null;
-	}
-
-	/**
-	 * @param id
-	 * @return the corresponding Node to the id
-	 */
-	public static Node getNode(int id){
-
-		for(Map.Entry<Integer, Node> n : nodes.entrySet() ){
-			if(n.getKey() == id)
-				return n.getValue();
-		}
-		return null;
-	}
+/**
+ * @param id
+ * @return the corresponding Node to the id
+ */
+public static Node getNode(int id){		
+	return nodes.get(id);
+}
 
 
-	public static void main(String[] args) {
-		new Application();
-	}
+public static void main(String[] args) {
+	new Application();
+}
 }
